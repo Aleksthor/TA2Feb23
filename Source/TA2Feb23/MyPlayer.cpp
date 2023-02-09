@@ -30,6 +30,7 @@ AMyPlayer::AMyPlayer()
 	Ammo = 10;
 	MaxAmmo = 10;
     MovementSpeed = 1000;
+	Lives = 5;
 
 	AutoPossessPlayer = EAutoReceiveInput::Player0;
 }
@@ -72,6 +73,15 @@ void AMyPlayer::Forward(float input)
 void AMyPlayer::Right(float input)
 {
 	YInput = input;
+}
+
+void AMyPlayer::HitByTarget()
+{
+	Lives--;
+	if (Lives <= 0)
+	{
+		// TODO GAME OVER
+	}
 }
 
 void AMyPlayer::Shoot()

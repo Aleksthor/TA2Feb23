@@ -57,6 +57,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "My Variables")
 	float MovementSpeed;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "My Variables")
+	int Lives;
+
+
+	/** Public Function */
+	void HitByTarget();
+
 	/** Private Variables */
 private:
 
