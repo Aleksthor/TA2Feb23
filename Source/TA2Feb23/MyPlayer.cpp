@@ -6,6 +6,10 @@
 #include "Camera/CameraComponent.h"
 #include "Bullet.h"
 
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "InputTriggers.h"
+
 // Sets default values
 AMyPlayer::AMyPlayer()
 {
@@ -40,6 +44,17 @@ void AMyPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 	
+
+	APlayerController* PlayerController = Cast<APlayerController>(Controller);
+	if (PlayerController) 
+	{
+		UEnhancedInputLocalPlayerSubsystem* subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
+		if (subsystem) 
+		{
+			subsystem->AddMappingContext(MappingContext, 0);
+
+		}
+	}
 }
 
 // Called every frame
@@ -58,21 +73,28 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	PlayerInputComponent->BindAxis("Forward", this, &AMyPlayer::Forward);
-	PlayerInputComponent->BindAxis("Right", this, &AMyPlayer::Right);
-
-	PlayerInputComponent->BindAction("Shoot", IE_Pressed, this, &AMyPlayer::Shoot);
-	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &AMyPlayer::Reload);
+	// Get the player controller
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (UEnhancedInputComponent* EnhanceInputCom = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
+		EnhanceInputCom->BindAction(ForwardInput, ETriggerEvent::Triggered, this, &AMyPlayer::Forward);
+		EnhanceInputCom->BindAction(RightInput, ETriggerEvent::Triggered, this, &AMyPlayer::Right);
+		EnhanceInputCom->BindAction(ForwardInput, ETriggerEvent::Completed, this, &AMyPlayer::Forward);
+		EnhanceInputCom->BindAction(RightInput, ETriggerEvent::Completed, this, &AMyPlayer::Right);
+		//EnhanceInputCom->BindAction(MouseX, ETriggerEvent::Started, this, &APawn::AddControllerYawInput);
+		//EnhanceInputCom->BindAction(MouseY, ETriggerEvent::Started, this, &APawn::AddControllerPitchInput);
+		EnhanceInputCom->BindAction(ShootInput, ETriggerEvent::Started, this, &AMyPlayer::Shoot);
+		EnhanceInputCom->BindAction(ReloadInput, ETriggerEvent::Started, this, &AMyPlayer::Reload);
+	}
 }
 
 
-void AMyPlayer::Forward(float input)
+void AMyPlayer::Forward(const FInputActionValue& input)
 {
-	XInput = input;
+	XInput = input.Get<float>();
 }
-void AMyPlayer::Right(float input)
+void AMyPlayer::Right(const FInputActionValue& input)
 {
-	YInput = input;
+	YInput = input.Get<float>();
 }
 
 void AMyPlayer::HitByTarget()
@@ -84,7 +106,7 @@ void AMyPlayer::HitByTarget()
 	}
 }
 
-void AMyPlayer::Shoot()
+void AMyPlayer::Shoot(const FInputActionValue& input)
 {
 	if (Ammo > 0)
 	{
@@ -95,7 +117,7 @@ void AMyPlayer::Shoot()
 										GetActorRotation());						// Rotation
 	}
 }
-void AMyPlayer::Reload()
+void AMyPlayer::Reload(const FInputActionValue& input)
 {
 	Ammo = MaxAmmo;
 }
