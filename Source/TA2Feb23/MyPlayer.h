@@ -70,6 +70,8 @@ private:
 
 	float XInput;
 	float YInput;
+	float Yaw;
+	float Pitch;
 
 
 private:
@@ -80,6 +82,9 @@ private:
 
 	void Shoot(const FInputActionValue& input);
 	void Reload(const FInputActionValue& input);
+
+	void MouseX(const FInputActionValue& input);
+	void MouseY(const FInputActionValue& input);
 
 public:
 	//Input

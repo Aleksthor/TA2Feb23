@@ -27,6 +27,10 @@ AMyPlayer::AMyPlayer()
 	SpringArm->SetRelativeRotation(FRotator(-15.f, 0.f, 0.f));
 	SpringArm->bEnableCameraLag = true;
 	SpringArm->CameraLagSpeed = 15.f;
+	SpringArm->bUsePawnControlRotation = true;
+
+	// Stand still when we dont move
+	bUseControllerRotationYaw = false;
 
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
@@ -61,11 +65,35 @@ void AMyPlayer::BeginPlay()
 void AMyPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	FVector ForwardVector = FVector(XInput, YInput, 0.f);
-	ForwardVector.Normalize();
+	AddControllerYawInput(Yaw);
+	AddControllerPitchInput(Pitch);
 
-	FVector NewLocation = GetActorLocation() + (ForwardVector * MovementSpeed * DeltaTime);
-	SetActorLocation(NewLocation);
+	// Ensure that no crashing happens
+	if ((Controller != nullptr) && (XInput != 0.f))
+	{
+		FRotator Rotation = Controller->GetControlRotation();
+		Rotation.Pitch = 0.f;
+		Rotation.Roll = 0.f;
+
+		// Gets the local forward vector - normalized
+		FVector Direction = FRotationMatrix(Rotation).GetUnitAxis(EAxis::X);
+		SetActorLocation(GetActorLocation() + (Direction * XInput * MovementSpeed * DeltaTime));
+
+		SetActorRotation(Rotation);
+	}
+	// Ensure that no crashing happens
+	if ((Controller != nullptr) && (YInput != 0.f))
+	{
+		FRotator Rotation = Controller->GetControlRotation();
+		Rotation.Pitch = 0.f;
+		Rotation.Roll = 0.f;
+
+		// Gets the local forward vector - normalized
+		FVector Direction = FRotationMatrix(Rotation).GetUnitAxis(EAxis::Y);
+		SetActorLocation(GetActorLocation() + (Direction * YInput * MovementSpeed * DeltaTime));
+
+		SetActorRotation(Rotation);
+	}
 }
 
 // Called to bind functionality to input
@@ -80,8 +108,14 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		EnhanceInputCom->BindAction(RightInput, ETriggerEvent::Triggered, this, &AMyPlayer::Right);
 		EnhanceInputCom->BindAction(ForwardInput, ETriggerEvent::Completed, this, &AMyPlayer::Forward);
 		EnhanceInputCom->BindAction(RightInput, ETriggerEvent::Completed, this, &AMyPlayer::Right);
-		//EnhanceInputCom->BindAction(MouseX, ETriggerEvent::Started, this, &APawn::AddControllerYawInput);
-		//EnhanceInputCom->BindAction(MouseY, ETriggerEvent::Started, this, &APawn::AddControllerPitchInput);
+
+		EnhanceInputCom->BindAction(MouseXInput, ETriggerEvent::Started, this, &AMyPlayer::MouseX);
+		EnhanceInputCom->BindAction(MouseYInput, ETriggerEvent::Started, this, &AMyPlayer::MouseY);
+		EnhanceInputCom->BindAction(MouseXInput, ETriggerEvent::Triggered, this, &AMyPlayer::MouseX);
+		EnhanceInputCom->BindAction(MouseYInput, ETriggerEvent::Triggered, this, &AMyPlayer::MouseY);
+		EnhanceInputCom->BindAction(MouseXInput, ETriggerEvent::Completed, this, &AMyPlayer::MouseX);
+		EnhanceInputCom->BindAction(MouseYInput, ETriggerEvent::Completed, this, &AMyPlayer::MouseY);
+
 		EnhanceInputCom->BindAction(ShootInput, ETriggerEvent::Started, this, &AMyPlayer::Shoot);
 		EnhanceInputCom->BindAction(ReloadInput, ETriggerEvent::Started, this, &AMyPlayer::Reload);
 	}
@@ -110,14 +144,36 @@ void AMyPlayer::Shoot(const FInputActionValue& input)
 {
 	if (Ammo > 0)
 	{
-		Ammo--;
+		if (Controller != nullptr)
+		{
+			FRotator Rotation = Controller->GetControlRotation();
+			Rotation.Pitch = 0.f;
+			Rotation.Roll = 0.f;
 
-		GetWorld()->SpawnActor<AActor>(Bullet_BP,									// What to spawn
-										GetActorLocation() + FVector(30.f,0.f,0.f), // Location
-										GetActorRotation());						// Rotation
+			// Gets the local forward vector - normalized
+			FVector Direction = FRotationMatrix(Rotation).GetUnitAxis(EAxis::X);
+
+
+			GetWorld()->SpawnActor<AActor>(Bullet_BP,									// What to spawn
+											GetActorLocation() + (Direction * 50.f),	// Location
+											Rotation);									// Rotation
+			Ammo--;
+
+		}
 	}
 }
 void AMyPlayer::Reload(const FInputActionValue& input)
 {
 	Ammo = MaxAmmo;
+}
+
+void AMyPlayer::MouseX(const FInputActionValue& input)
+{
+	Yaw = input.Get<float>();
+	
+}
+
+void AMyPlayer::MouseY(const FInputActionValue& input)
+{
+	Pitch = input.Get<float>();
 }
